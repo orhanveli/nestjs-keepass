@@ -1,8 +1,8 @@
 {
-  "name": "nest-typescript-starter",
+  "name": "passkey-be",
   "private": true,
   "version": "1.0.0",
-  "description": "Nest TypeScript starter repository",
+  "description": "Passkey NestJS backend",
   "license": "MIT",
   "scripts": {
     "build": "nest build",
