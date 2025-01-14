@@ -11,12 +11,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   logger = new Logger(JwtAuthGuard.name);
 
   canActivate(context: ExecutionContext) {
-    // Add your custom authentication logic here if needed
-    return super.canActivate(context);
+    const request = context.switchToHttp().getRequest();
+    return !!request?.user;
   }
 
   handleRequest(err, user, info) {
-    this.logger.log(info);
+    this.logger.debug(info);
     if (err || !user) {
       throw err || new UnauthorizedException();
     }

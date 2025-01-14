@@ -6,13 +6,14 @@ import {
   Post,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginReqModel } from './models/login-req.model';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  async login(@Body() body: { username: string; password: string }) {
+  async login(@Body() body: LoginReqModel) {
     const user = await this.authService.validateUser(
       body.username,
       body.password,
