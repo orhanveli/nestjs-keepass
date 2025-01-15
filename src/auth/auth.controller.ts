@@ -26,13 +26,15 @@ import { FinishPasskeyLoginReqModel } from './models/finish-passkey-login-req.mo
 import { FinishPasskeyRegisterReqModel } from './models/finish-passkey-register-req.model';
 import { LoginResModel } from './models/login-res.model';
 import { StartPasskeyRegisterResModel } from './models/start-passkey-register-res.model';
+import { StartPasskeyLoginResModel } from './models/start-passkey-login-res.model';
+import { FinishPasskeyLoginResModel } from './models/finish-passkey-login-res.model';
 
-const authNRegisterOptions: Map<
+const authNRegisterOptions: Record<
   string,
   PublicKeyCredentialCreationOptionsJSON
-> = new Map();
-const authNLoginOptions: Map<string, PublicKeyCredentialRequestOptionsJSON> =
-  new Map();
+> = {};
+const authNLoginOptions: Record<string, PublicKeyCredentialRequestOptionsJSON> =
+  {};
 
 @Controller('auth')
 export class AuthController {
@@ -141,7 +143,7 @@ export class AuthController {
       verification = await verifyRegistrationResponse({
         response: body,
         expectedChallenge: currentOptions.challenge,
-        expectedOrigin: origin,
+        expectedOrigin: webAuthN.origin,
         expectedRPID: webAuthN.rpID,
       });
     } catch (error) {
@@ -171,7 +173,9 @@ export class AuthController {
   }
 
   @Post('passkey/login-start')
-  async authnLoginStart(@Body() body: StartPasskeyLoginReqModel) {
+  async authnLoginStart(
+    @Body() body: StartPasskeyLoginReqModel,
+  ): Promise<StartPasskeyLoginResModel> {
     const user = await this.authService.findUserByUsername(body.username);
     if (!user) {
       throw new HttpException(
@@ -181,6 +185,13 @@ export class AuthController {
     }
 
     const userPasskeys = await this.authService.getPasskeysByUser(user.id);
+    if (!userPasskeys || userPasskeys.length === 0) {
+      throw new HttpException(
+        { error: 'No passkeys found for user' },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const options = await generateAuthenticationOptions({
       rpID: webAuthN.rpID,
       // Require users to use a previously-registered authenticator
@@ -190,11 +201,13 @@ export class AuthController {
       })),
     });
     authNLoginOptions[user.id] = options;
-    return options;
+    return { options };
   }
 
   @Post('passkey/login-finish')
-  async authnLoginFinish(@Body() body: FinishPasskeyLoginReqModel) {
+  async authnLoginFinish(
+    @Body() body: FinishPasskeyLoginReqModel,
+  ): Promise<FinishPasskeyLoginResModel> {
     const user = await this.authService.findUserByUsername(body.username);
     if (!user) {
       throw new HttpException(
@@ -233,13 +246,14 @@ export class AuthController {
       passkey.counter = verification.authenticationInfo.newCounter;
       const loginResult = await this.authService.login(user);
       return {
+        verified,
         access_token: loginResult.access_token,
         user,
       };
     }
 
     throw new HttpException(
-      { error: 'Authentication failed' },
+      { verified: false, error: 'Authentication failed' },
       HttpStatus.BAD_REQUEST,
     );
   }

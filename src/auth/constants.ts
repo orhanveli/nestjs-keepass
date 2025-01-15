@@ -1,4 +1,4 @@
-const rpID = 'localhost';
+const rpID = 'localhost:5173';
 
 export const webAuthN = {
   /**
