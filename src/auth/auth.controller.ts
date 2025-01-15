@@ -133,7 +133,7 @@ export class AuthController {
   async authnRegisterFinish(
     @Body() body: FinishPasskeyRegisterReqModel,
     @Req() request: Express.Request & { user: User },
-  ) {
+  ): Promise<FinishPasskeyLoginResModel> {
     const user = request.user;
 
     const currentOptions = authNRegisterOptions[user.id];
@@ -148,7 +148,10 @@ export class AuthController {
       });
     } catch (error) {
       console.error(error);
-      throw new HttpException({ error: error.message }, HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        { verified: false, error: error.message },
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const { verified } = verification;
@@ -165,10 +168,18 @@ export class AuthController {
           verification.registrationInfo?.credentialDeviceType ?? 'singleDevice',
         webauthnUserID: user.id,
       });
+      const login = await this.authService.login(user);
+      return {
+        verified,
+        access_token: login.access_token,
+        user,
+      };
     }
 
     return {
       verified,
+      access_token: null,
+      user: null,
     };
   }
 
@@ -225,7 +236,7 @@ export class AuthController {
       verification = await verifyAuthenticationResponse({
         response: body.options,
         expectedChallenge: currentOptions.challenge,
-        expectedOrigin: origin,
+        expectedOrigin: webAuthN.origin,
         expectedRPID: webAuthN.rpID,
         credential: {
           id: passkey.id,

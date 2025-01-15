@@ -1,5 +1,3 @@
-const rpID = 'localhost:5173';
-
 export const webAuthN = {
   /**
    * Human-readable title for your website
@@ -9,11 +7,11 @@ export const webAuthN = {
    * A unique identifier for your website. 'localhost' is okay for
    * local dev
    */
-  rpID,
+  rpID: 'localhost',
   /**
    * The URL at which registrations and authentications should occur.
    * 'http://localhost' and 'http://localhost:PORT' are also valid.
    * Do NOT include any trailing /
    */
-  origin: `http://${rpID}`,
+  origin: `https://localhost:5173`,
 };
