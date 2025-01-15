@@ -6,8 +6,18 @@ import { Passkey } from './models/passkey.model';
 @Injectable()
 export class AuthService {
   private readonly users: User[] = [
-    { id: 'user1', username: 'admin', password: 'admin123' },
-    { id: 'user2', username: 'user', password: 'user123' },
+    {
+      id: 'user1',
+      username: 'admin',
+      password: 'admin123',
+      email: 'admin@example.com',
+    },
+    {
+      id: 'user2',
+      username: 'user',
+      password: 'user123',
+      email: 'user@example.com',
+    },
   ];
 
   private readonly passkeys: Passkey[] = [
@@ -32,10 +42,11 @@ export class AuthService {
     );
 
     if (user) {
-      const { id, username } = user;
+      const { id, username, email } = user;
       return {
         id,
         username,
+        email,
       };
     }
     return null;

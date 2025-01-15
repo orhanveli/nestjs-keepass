@@ -24,6 +24,8 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { StartPasskeyLoginReqModel } from './models/start-passkey-login-req.model';
 import { FinishPasskeyLoginReqModel } from './models/finish-passkey-login-req.model';
 import { FinishPasskeyRegisterReqModel } from './models/finish-passkey-register-req.model';
+import { LoginResModel } from './models/login-res.model';
+import { StartPasskeyRegisterResModel } from './models/start-passkey-register-res.model';
 
 const authNRegisterOptions: Map<
   string,
@@ -37,23 +39,66 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  async login(@Body() body: LoginReqModel) {
-    const user = await this.authService.validateUser(
-      body.username,
-      body.password,
-    );
-
+  async login(@Body() body: LoginReqModel): Promise<LoginResModel> {
+    const user = await this.authService.findUserByUsername(body.username);
     if (!user) {
-      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+      throw new HttpException(
+        { error: 'invalid ussernam' },
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    return this.authService.login(user);
+    const passkeys = await this.authService.getPasskeysByUser(user.id);
+    if (!passkeys || passkeys.length === 0) {
+      if (!body.regular_login) {
+        return {
+          passkey_enabled: false,
+        };
+      }
+      if (!body.password) {
+        throw new HttpException(
+          { error: 'password is required' },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const validateResult = await this.authService.validateUser(
+        body.username,
+        body.password,
+      );
+      if (!validateResult) {
+        throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+      }
+      const loginResult = await this.authService.login(user);
+      return {
+        passkey_enabled: false,
+        access_token: loginResult.access_token,
+        user,
+      };
+    }
+
+    return {
+      passkey_enabled: true,
+    };
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@Req() request: Express.Request & { user: User }) {
+    const reqUser = request.user;
+
+    return {
+      user: reqUser,
+    };
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('passkey/register-start')
-  async authnRegisterStart(@Req() request: Express.Request & { user: User }) {
+  async authnRegisterStart(
+    @Req() request: Express.Request & { user: User },
+  ): Promise<StartPasskeyRegisterResModel> {
     const user = request.user;
     const userPasskeys = await this.authService.getPasskeysByUser(user.id);
     const options = await generateRegistrationOptions({
@@ -77,7 +122,7 @@ export class AuthController {
       // supportedAlgorithmIDs: [],
     });
     authNRegisterOptions[user.id] = options;
-    return options;
+    return { options };
   }
 
   @ApiBearerAuth()
@@ -186,12 +231,16 @@ export class AuthController {
     if (verified) {
       // Update the authenticator's counter
       passkey.counter = verification.authenticationInfo.newCounter;
-      return this.authService.login(user);
-    } else {
-      throw new HttpException(
-        { error: 'Authentication failed' },
-        HttpStatus.BAD_REQUEST,
-      );
+      const loginResult = await this.authService.login(user);
+      return {
+        access_token: loginResult.access_token,
+        user,
+      };
     }
+
+    throw new HttpException(
+      { error: 'Authentication failed' },
+      HttpStatus.BAD_REQUEST,
+    );
   }
 }

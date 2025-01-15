@@ -9,4 +9,7 @@ export class User {
 
   @ApiProperty()
   password: string;
+
+  @ApiProperty()
+  email: string;
 }

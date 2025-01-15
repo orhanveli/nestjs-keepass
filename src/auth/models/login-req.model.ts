@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 
 export class LoginReqModel {
   @ApiProperty({
@@ -8,9 +8,14 @@ export class LoginReqModel {
   @IsNotEmpty()
   username: string;
 
+  @ApiProperty()
+  @IsOptional()
+  regular_login?: boolean;
+
   @ApiProperty({
     example: 'user123',
+    required: false,
   })
-  @IsNotEmpty()
-  password: string;
+  @IsOptional()
+  password?: string;
 }

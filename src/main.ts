@@ -17,6 +17,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
 
+  app.enableCors({
+    origin: 'http://localhost:3000',
+  });
+
   // class transformer
   app.useGlobalPipes(new ValidationPipe({ transform: true })); // Ensure this line is included to use class-transformer and class-validator
 
