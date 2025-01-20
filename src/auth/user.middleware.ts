@@ -26,7 +26,11 @@ export class UserMiddleware implements NestMiddleware {
       const user = await this.authService.findUser(payload.sub);
 
       if (user) {
-        req['user'] = user;
+        req['user'] = {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+        };
       }
     } catch (err) {
       throw new UnauthorizedException();
