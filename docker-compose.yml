@@ -1,16 +1,28 @@
 services:
-  caddy:
-    image: caddy:2
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
+  postgres:
+    image: postgres:15-alpine
+    container_name: passkeys_postgres
+    environment:
+      POSTGRES_USER: passkeys
+      POSTGRES_PASSWORD: passkeys
+      POSTGRES_DB: passkeys_db
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_dir:/usr/local/pgsql-15
+    ports:
+      - '5432:5432'
+
+  pgadmin4:
+    image: dpage/pgadmin4:latest
+    container_name: passkeys_pgadmin
+    ports:
+      - '8085:80'
+    volumes:
+      - postgres_dir:/usr/local/pgsql-16
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@domain.com
+      PGADMIN_DEFAULT_PASSWORD: admin
 
 volumes:
-  caddy_data:
-  caddy_config:
+  postgres_data:
+  postgres_dir:

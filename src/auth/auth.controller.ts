@@ -16,9 +16,12 @@ import {
   VerifiedRegistrationResponse,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
+  AuthenticatorTransportFuture,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
 } from '@simplewebauthn/server';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { User } from './models/user.model';
+import { UserEntity } from './entities/user.entity';
 import { webAuthN } from './constants';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { StartPasskeyLoginReqModel } from './models/start-passkey-login-req.model';
@@ -87,7 +90,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() request: Express.Request & { user: User }) {
+  async me(@Req() request: Express.Request & { user: UserEntity }) {
     const reqUser = request.user;
 
     return {
@@ -99,7 +102,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('passkey/register-start')
   async authnRegisterStart(
-    @Req() request: Express.Request & { user: User },
+    @Req() request: Express.Request & { user: UserEntity },
   ): Promise<StartPasskeyRegisterResModel> {
     const user = request.user;
     const userPasskeys = await this.authService.getPasskeysByUser(user.id);
@@ -132,7 +135,7 @@ export class AuthController {
   @Post('passkey/register-finish')
   async authnRegisterFinish(
     @Body() body: FinishPasskeyRegisterReqModel,
-    @Req() request: Express.Request & { user: User },
+    @Req() request: Express.Request & { user: UserEntity },
   ): Promise<FinishPasskeyLoginResModel> {
     const user = request.user;
 
@@ -157,13 +160,18 @@ export class AuthController {
     const { verified } = verification;
 
     if (verified) {
+      const publicKeyBase64 = Buffer.from(
+        verification.registrationInfo.credential.publicKey,
+      ).toString('base64');
+
       await this.authService.addPasskey({
         user,
         backedUp: verification.registrationInfo?.credentialBackedUp ?? false,
         counter: verification.registrationInfo?.credential?.counter ?? 0,
-        transports: verification.registrationInfo?.credential?.transports ?? [],
+        transports: (verification.registrationInfo?.credential?.transports ??
+          []) as AuthenticatorTransportFuture[],
         id: verification.registrationInfo?.credential.id,
-        publicKey: verification.registrationInfo?.credential?.publicKey,
+        publicKey: publicKeyBase64,
         deviceType:
           verification.registrationInfo?.credentialDeviceType ?? 'singleDevice',
         webauthnUserID: user.id,
@@ -205,10 +213,9 @@ export class AuthController {
 
     const options = await generateAuthenticationOptions({
       rpID: webAuthN.rpID,
-      // Require users to use a previously-registered authenticator
       allowCredentials: userPasskeys.map((passkey) => ({
         id: passkey.id,
-        transports: passkey.transports,
+        transports: passkey.transports as AuthenticatorTransportFuture[],
       })),
     });
     authNLoginOptions[user.id] = options;
@@ -233,6 +240,8 @@ export class AuthController {
 
     let verification;
     try {
+      const publicKeyBuffer = Buffer.from(passkey.publicKey, 'base64');
+
       verification = await verifyAuthenticationResponse({
         response: body.options,
         expectedChallenge: currentOptions.challenge,
@@ -240,9 +249,9 @@ export class AuthController {
         expectedRPID: webAuthN.rpID,
         credential: {
           id: passkey.id,
-          publicKey: passkey.publicKey,
+          publicKey: publicKeyBuffer,
           counter: passkey.counter,
-          transports: passkey.transports,
+          transports: passkey.transports as AuthenticatorTransportFuture[],
         },
       });
     } catch (error) {

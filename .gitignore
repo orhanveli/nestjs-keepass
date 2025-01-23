@@ -398,3 +398,12 @@ Temporary Items
 dist
 .webpack
 .serverless/**/*.zip
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database
+postgres_data/
+postgres_dir/
