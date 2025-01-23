@@ -45,10 +45,10 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() body: LoginReqModel): Promise<LoginResModel> {
-    const user = await this.authService.findUserByUsername(body.username);
+    const user = await this.authService.findUserByEmail(body.email);
     if (!user) {
       throw new HttpException(
-        { error: 'invalid ussernam' },
+        { error: 'Invalid email address' },
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -62,13 +62,13 @@ export class AuthController {
       }
       if (!body.password) {
         throw new HttpException(
-          { error: 'password is required' },
+          { error: 'Password is required' },
           HttpStatus.BAD_REQUEST,
         );
       }
 
       const validateResult = await this.authService.validateUser(
-        body.username,
+        body.email,
         body.password,
       );
       if (!validateResult) {
@@ -195,7 +195,7 @@ export class AuthController {
   async authnLoginStart(
     @Body() body: StartPasskeyLoginReqModel,
   ): Promise<StartPasskeyLoginResModel> {
-    const user = await this.authService.findUserByUsername(body.username);
+    const user = await this.authService.findUserByEmail(body.email);
     if (!user) {
       throw new HttpException(
         { error: 'User not found' },
@@ -226,7 +226,7 @@ export class AuthController {
   async authnLoginFinish(
     @Body() body: FinishPasskeyLoginReqModel,
   ): Promise<FinishPasskeyLoginResModel> {
-    const user = await this.authService.findUserByUsername(body.username);
+    const user = await this.authService.findUserByEmail(body.email);
     if (!user) {
       throw new HttpException(
         { error: 'User not found' },

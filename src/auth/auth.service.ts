@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from './entities/user.entity';
 import { PasskeyEntity } from './entities/passkey.entity';
+import { PasswordUtil } from '../common/utils/password.util';
 
 @Injectable()
 export class AuthService {
@@ -17,19 +18,33 @@ export class AuthService {
   ) {}
 
   async validateUser(
-    username: string,
+    email: string,
     password: string,
   ): Promise<Omit<UserEntity, 'password'> | null> {
     const user = await this.userRepository.findOne({
-      where: { username },
+      where: { email },
       select: ['id', 'username', 'email', 'password'],
     });
 
-    if (user && user.password === password) {
+    if (user && PasswordUtil.verify(password, user.password)) {
       const { password, ...result } = user;
       return result;
     }
     return null;
+  }
+
+  async createUser(
+    username: string,
+    email: string,
+    password: string,
+  ): Promise<UserEntity> {
+    const encryptedPassword = PasswordUtil.encrypt(password);
+    const user = this.userRepository.create({
+      username,
+      email,
+      password: encryptedPassword,
+    });
+    return this.userRepository.save(user);
   }
 
   async findUser(id: string): Promise<UserEntity> {
@@ -43,13 +58,13 @@ export class AuthService {
     return user;
   }
 
-  async findUserByUsername(username: string): Promise<UserEntity> {
+  async findUserByEmail(email: string): Promise<UserEntity> {
     const user = await this.userRepository.findOne({
-      where: { username },
+      where: { email },
       relations: ['passkeys'],
     });
     if (!user) {
-      throw new NotFoundException(`User with username ${username} not found`);
+      throw new NotFoundException(`User with email ${email} not found`);
     }
     return user;
   }
@@ -57,7 +72,7 @@ export class AuthService {
   async login(
     user: Omit<UserEntity, 'password'>,
   ): Promise<{ access_token: string }> {
-    const payload = { username: user.username, sub: user.id };
+    const payload = { email: user.email, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload),
     };

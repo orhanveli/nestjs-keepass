@@ -1,21 +1,18 @@
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional } from 'class-validator';
 
 export class LoginReqModel {
-  @ApiProperty({
-    example: 'user',
-  })
-  @IsNotEmpty()
-  username: string;
-
   @ApiProperty()
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  @MinLength(6)
+  password?: string;
+
+  @ApiProperty({ required: false })
   @IsOptional()
   regular_login?: boolean;
-
-  @ApiProperty({
-    example: 'user123',
-    required: false,
-  })
-  @IsOptional()
-  password?: string;
 }

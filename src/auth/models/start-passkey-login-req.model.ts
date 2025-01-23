@@ -6,5 +6,5 @@ export class StartPasskeyLoginReqModel {
     example: 'user',
   })
   @IsNotEmpty()
-  username: string;
+  email: string;
 }

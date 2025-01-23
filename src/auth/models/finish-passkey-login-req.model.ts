@@ -7,7 +7,7 @@ export class FinishPasskeyLoginReqModel {
     example: 'user',
   })
   @IsNotEmpty()
-  username: string;
+  email: string;
 
   @ApiProperty({})
   @IsNotEmpty()
