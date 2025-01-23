@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,15 +20,14 @@ export class AuthService {
   async validateUser(
     email: string,
     password: string,
-  ): Promise<Omit<UserEntity, 'password'> | null> {
+  ): Promise<UserEntity | null> {
     const user = await this.userRepository.findOne({
       where: { email },
       select: ['id', 'username', 'email', 'password'],
     });
 
     if (user && PasswordUtil.verify(password, user.password)) {
-      const { password, ...result } = user;
-      return result;
+      return user;
     }
     return null;
   }
@@ -53,7 +52,7 @@ export class AuthService {
       relations: ['passkeys'],
     });
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new BadRequestException(`User with ID ${id} not found`);
     }
     return user;
   }
@@ -64,7 +63,7 @@ export class AuthService {
       relations: ['passkeys'],
     });
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw new BadRequestException(`User with email ${email} not found`);
     }
     return user;
   }

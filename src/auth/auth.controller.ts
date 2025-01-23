@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Body,
   Controller,
@@ -78,7 +79,11 @@ export class AuthController {
       return {
         passkey_enabled: false,
         access_token: loginResult.access_token,
-        user,
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+        },
       };
     }
 

@@ -6,7 +6,7 @@ export class LoginResModel {
   access_token?: string;
 
   @ApiProperty()
-  user?: Omit<User, 'password'>;
+  user?: User;
 
   @ApiProperty()
   passkey_enabled: boolean;
