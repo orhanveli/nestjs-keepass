@@ -6,10 +6,12 @@ import { Repository } from 'typeorm';
 import { UserEntity } from './entities/user.entity';
 import { PasskeyEntity } from './entities/passkey.entity';
 import { PasswordUtil } from '../common/utils/password.util';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
+    private readonly configService: ConfigService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(PasskeyEntity)

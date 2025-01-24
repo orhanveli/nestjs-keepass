@@ -1,14 +1,12 @@
-import {
-  Injectable,
-  NestMiddleware,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserMiddleware implements NestMiddleware {
+  logger = new Logger(UserMiddleware.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
@@ -33,7 +31,7 @@ export class UserMiddleware implements NestMiddleware {
         };
       }
     } catch (err) {
-      throw new UnauthorizedException();
+      this.logger.error(err);
     }
 
     next();

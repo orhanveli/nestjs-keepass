@@ -15,12 +15,14 @@ import { PasskeyEntity } from './entities/passkey.entity';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRATION'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        return {
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: {
+            expiresIn: configService.get<string>('JWT_EXPIRES_IN'),
+          },
+        };
+      },
     }),
     TypeOrmModule.forFeature([UserEntity, PasskeyEntity]),
   ],
