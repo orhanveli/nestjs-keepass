@@ -28,6 +28,7 @@ export class UserMiddleware implements NestMiddleware {
           id: user.id,
           email: user.email,
           username: user.username,
+          totp_enabled: user.totpEnabled,
         };
       }
     } catch (err) {

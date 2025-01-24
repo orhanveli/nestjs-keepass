@@ -155,7 +155,7 @@ DB_DATABASE=passkeys_db
 
 # JWT
 JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=3600
+JWT_EXPIRES_IN=1h
 ```
 
 ## API Documentation

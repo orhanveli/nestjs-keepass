@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from './entities/user.entity';
-import { PasskeyEntity } from './entities/passkey.entity';
 import { PasswordUtil } from '../common/utils/password.util';
 import { ConfigService } from '@nestjs/config';
 
@@ -14,8 +13,6 @@ export class AuthService {
     private readonly configService: ConfigService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(PasskeyEntity)
-    private readonly passkeyRepository: Repository<PasskeyEntity>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -77,17 +74,5 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
     };
-  }
-
-  async getPasskeysByUser(userId: string): Promise<PasskeyEntity[]> {
-    return this.passkeyRepository.find({
-      where: { user: { id: userId } },
-      relations: ['user'],
-    });
-  }
-
-  async addPasskey(passkey: Partial<PasskeyEntity>): Promise<PasskeyEntity> {
-    const newPasskey = this.passkeyRepository.create(passkey);
-    return this.passkeyRepository.save(newPasskey);
   }
 }

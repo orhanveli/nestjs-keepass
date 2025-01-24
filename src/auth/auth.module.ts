@@ -9,6 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { PasskeyEntity } from './entities/passkey.entity';
+import { TotpService } from './totp.service';
+import { TotpEntity } from './entities/totp.entity';
+import { PasskeyService } from './passkey.service';
 
 @Module({
   imports: [
@@ -24,10 +27,10 @@ import { PasskeyEntity } from './entities/passkey.entity';
         };
       },
     }),
-    TypeOrmModule.forFeature([UserEntity, PasskeyEntity]),
+    TypeOrmModule.forFeature([UserEntity, PasskeyEntity, TotpEntity]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, PasskeyService, TotpService, JwtStrategy],
   exports: [AuthService],
 })
 export class AuthModule implements NestModule {

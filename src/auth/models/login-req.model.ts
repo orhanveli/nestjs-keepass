@@ -1,4 +1,10 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginReqModel {
@@ -11,8 +17,13 @@ export class LoginReqModel {
   @ApiProperty({ required: false, example: 'user123' })
   @IsString()
   @IsOptional()
-  @MinLength(6)
   password?: string;
+
+  @ApiProperty({ required: false, example: '123456' })
+  @IsString()
+  @IsOptional()
+  @Length(6, 6)
+  otp?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

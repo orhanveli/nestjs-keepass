@@ -32,6 +32,8 @@ import { LoginResModel } from './models/login-res.model';
 import { StartPasskeyRegisterResModel } from './models/start-passkey-register-res.model';
 import { StartPasskeyLoginResModel } from './models/start-passkey-login-res.model';
 import { FinishPasskeyLoginResModel } from './models/finish-passkey-login-res.model';
+import { TotpService } from './totp.service';
+import { PasskeyService } from './passkey.service';
 
 const authNRegisterOptions: Record<
   string,
@@ -42,7 +44,11 @@ const authNLoginOptions: Record<string, PublicKeyCredentialRequestOptionsJSON> =
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly totpService: TotpService,
+    private readonly passkeyService: PasskeyService,
+  ) {}
 
   @Post('login')
   async login(@Body() body: LoginReqModel): Promise<LoginResModel> {
@@ -54,11 +60,12 @@ export class AuthController {
       );
     }
 
-    const passkeys = await this.authService.getPasskeysByUser(user.id);
+    const passkeys = await this.passkeyService.getPasskeysByUser(user.id);
     if (!passkeys || passkeys.length === 0) {
       if (!body.regular_login) {
         return {
           passkey_enabled: false,
+          totp_enabled: user.totpEnabled,
         };
       }
       if (!body.password) {
@@ -66,6 +73,28 @@ export class AuthController {
           { error: 'Password is required' },
           HttpStatus.BAD_REQUEST,
         );
+      }
+
+      const totps = await this.totpService.findByUser(user.id);
+      if (user.totpEnabled && totps?.length > 0) {
+        if (body.otp) {
+          const validateOtpResult = await this.totpService.verifyTotpCode(
+            user,
+            body.otp,
+          );
+
+          if (!validateOtpResult) {
+            throw new HttpException(
+              { error: 'Invalid OTP' },
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+        }
+
+        return {
+          passkey_enabled: false,
+          totp_enabled: true,
+        };
       }
 
       const validateResult = await this.authService.validateUser(
@@ -78,6 +107,7 @@ export class AuthController {
       const loginResult = await this.authService.login(user);
       return {
         passkey_enabled: false,
+        totp_enabled: user.totpEnabled,
         access_token: loginResult.access_token,
         user: {
           id: user.id,
@@ -89,6 +119,7 @@ export class AuthController {
 
     return {
       passkey_enabled: true,
+      totp_enabled: user.totpEnabled,
     };
   }
 
@@ -110,7 +141,7 @@ export class AuthController {
     @Req() request: Express.Request & { user: UserEntity },
   ): Promise<StartPasskeyRegisterResModel> {
     const user = request.user;
-    const userPasskeys = await this.authService.getPasskeysByUser(user.id);
+    const userPasskeys = await this.passkeyService.getPasskeysByUser(user.id);
     const options = await generateRegistrationOptions({
       rpName: webAuthN.rpName,
       rpID: webAuthN.rpID,
@@ -169,13 +200,13 @@ export class AuthController {
         verification.registrationInfo.credential.publicKey,
       ).toString('base64');
 
-      await this.authService.addPasskey({
+      await this.passkeyService.addPasskey({
         user,
         backedUp: verification.registrationInfo?.credentialBackedUp ?? false,
         counter: verification.registrationInfo?.credential?.counter ?? 0,
         transports: (verification.registrationInfo?.credential?.transports ??
           []) as AuthenticatorTransportFuture[],
-        id: verification.registrationInfo?.credential.id,
+        credentialId: verification.registrationInfo?.credential.id,
         publicKey: publicKeyBase64,
         deviceType:
           verification.registrationInfo?.credentialDeviceType ?? 'singleDevice',
@@ -208,7 +239,7 @@ export class AuthController {
       );
     }
 
-    const userPasskeys = await this.authService.getPasskeysByUser(user.id);
+    const userPasskeys = await this.passkeyService.getPasskeysByUser(user.id);
     if (!userPasskeys || userPasskeys.length === 0) {
       throw new HttpException(
         { error: 'No passkeys found for user' },
@@ -219,7 +250,7 @@ export class AuthController {
     const options = await generateAuthenticationOptions({
       rpID: webAuthN.rpID,
       allowCredentials: userPasskeys.map((passkey) => ({
-        id: passkey.id,
+        id: passkey.credentialId,
         transports: passkey.transports as AuthenticatorTransportFuture[],
       })),
     });
@@ -239,8 +270,10 @@ export class AuthController {
       );
     }
 
-    const userPasskeys = await this.authService.getPasskeysByUser(user.id);
-    const passkey = userPasskeys.find((pk) => pk.id === body.options.id);
+    const userPasskeys = await this.passkeyService.getPasskeysByUser(user.id);
+    const passkey = userPasskeys.find(
+      (pk) => pk.credentialId === body.options.id,
+    );
     const currentOptions = authNLoginOptions[user.id];
 
     let verification;
@@ -268,7 +301,10 @@ export class AuthController {
 
     if (verified) {
       // Update the authenticator's counter
-      passkey.counter = verification.authenticationInfo.newCounter;
+      await this.passkeyService.updateCounter(
+        passkey,
+        verification.authenticationInfo.newCounter,
+      );
       const loginResult = await this.authService.login(user);
       return {
         verified,

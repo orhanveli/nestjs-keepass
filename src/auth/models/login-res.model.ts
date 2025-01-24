@@ -10,4 +10,7 @@ export class LoginResModel {
 
   @ApiProperty()
   passkey_enabled: boolean;
+
+  @ApiProperty()
+  totp_enabled: boolean;
 }
